@@ -4,9 +4,9 @@
   "description": "Playwright automation demo using TypeScript",
   "private": true,
   "scripts": {
-    "test": "playwright test tests/adding-and-moving-sites.spec.ts",
-    "test:headed": "playwright test tests/adding-and-moving-sites.spec.ts --headed",
-    "test:debug": "playwright test tests/adding-and-moving-sites.spec.ts --debug",
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "test:debug": "playwright test --debug",
     "test:ui": "playwright test --ui",
     "report": "playwright show-report",
     "codegen": "playwright codegen",

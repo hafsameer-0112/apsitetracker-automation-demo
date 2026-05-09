@@ -11,9 +11,9 @@
  */
 
 import { test, expect } from '../src/fixtures/test-fixtures';
-import { BundleCache } from '../src/utils/bundle-cache';
 import { MapDashboardPage } from '../src/pages/MapDashboardPage';
 import { TestData } from '../src/data/test-data';
+import { logger } from '../src/utils/logger';
 
 const { siteOrigin, siteDestination } = TestData.sites;
 
@@ -35,7 +35,6 @@ function haversineKm(a: { lat: number; lng: number }, b: { lat: number; lng: num
 test.describe('Adding and moving sites', () => {
   test('create a site and then move its pin', async ({ page, dashboardPage }) => {
     test.setTimeout(15 * 60 * 1000);
-    await BundleCache.attach(page);
     await MapDashboardPage.installMapInitHook(page);
 
     await page.goto('/', { waitUntil: 'commit', timeout: 60_000 });
@@ -51,11 +50,11 @@ test.describe('Adding and moving sites', () => {
 
     const baselineRows = await dashboardPage.getTotalRowCount();
     const baselineMarkers = await dashboardPage.getVisibleMarkerCount();
-    console.log('─────────────────────────────────────────────────────');
-    console.log('🚀 TEST START');
-    console.log(`   Baseline table rows  : ${baselineRows}`);
-    console.log(`   Baseline map markers : ${baselineMarkers}`);
-    console.log('─────────────────────────────────────────────────────');
+    logger.info('─────────────────────────────────────────────────────');
+    logger.info('TEST START');
+    logger.info(`Baseline table rows  : ${baselineRows}`);
+    logger.info(`Baseline map markers : ${baselineMarkers}`);
+    logger.info('─────────────────────────────────────────────────────');
 
     // ── STEP 1: Right-click map → popup appears ───────────────────────────────
     await test.step('Step 1 — right-click map, popup appears', async () => {
@@ -67,18 +66,16 @@ test.describe('Adding and moving sites', () => {
 
       const fields = await dashboardPage.getCreateSiteDialogFields();
 
-      console.log('\n✅ STEP 1 DONE — Popup appeared at clicked location');
-      console.log('   Expected results:');
-      console.log('   ✔ A popup window appears at the clicked location on the map');
-      console.log('   ✔ The popup displays site information fields:');
-      console.log(`       Street  : ${fields.street ?? '(reverse-geocoding pending)'}`);
-      console.log(`       City    : ${fields.city ?? '(reverse-geocoding pending)'}`);
-      console.log(`       State   : ${fields.state ?? '(reverse-geocoding pending)'}`);
-      console.log(`       County  : ${fields.county ?? '(reverse-geocoding pending)'}`);
-      console.log(`       Lat     : ${fields.lat}`);
-      console.log(`       Lng     : ${fields.lng}`);
-      console.log('   ✔ Popup includes "Create Site" button : visible');
-      console.log('   ✔ Popup includes "Cancel" button      : visible');
+      logger.info('STEP 1 DONE — Popup appeared at clicked location');
+      logger.info('  ✔ A popup window appears at the clicked location on the map');
+      logger.info(`  ✔ Street  : ${fields.street ?? '(reverse-geocoding pending)'}`);
+      logger.info(`  ✔ City    : ${fields.city ?? '(reverse-geocoding pending)'}`);
+      logger.info(`  ✔ State   : ${fields.state ?? '(reverse-geocoding pending)'}`);
+      logger.info(`  ✔ County  : ${fields.county ?? '(reverse-geocoding pending)'}`);
+      logger.info(`  ✔ Lat     : ${fields.lat}`);
+      logger.info(`  ✔ Lng     : ${fields.lng}`);
+      logger.info('  ✔ "Create Site" button : visible');
+      logger.info('  ✔ "Cancel" button      : visible');
     });
 
     // ── STEP 2: Click "Create Site" → new pin + row ───────────────────────────
@@ -100,12 +97,11 @@ test.describe('Adding and moving sites', () => {
 
       expect(newRows).toBeGreaterThanOrEqual(baselineRows + 1);
 
-      console.log('\n✅ STEP 2 DONE — Site created');
-      console.log('   Expected results:');
-      console.log(`   ✔ A new pin appeared on the map  (markers: ${baselineMarkers} → ${newMarkers})`);
-      console.log(`   ✔ A new row added to the table   (rows: ${baselineRows} → ${newRows})`);
-      console.log(`   ✔ Row corresponds to map location: ${siteOrigin.address}, ${siteOrigin.city}, ${siteOrigin.state}`);
-      console.log(`   ✔ Coordinates: Lat ${siteOrigin.lat}, Lng ${siteOrigin.lng}`);
+      logger.info('STEP 2 DONE — Site created');
+      logger.info(`  ✔ New pin on map  (markers: ${baselineMarkers} → ${newMarkers})`);
+      logger.info(`  ✔ New row in table (rows: ${baselineRows} → ${newRows})`);
+      logger.info(`  ✔ Location: ${siteOrigin.address}, ${siteOrigin.city}, ${siteOrigin.state}`);
+      logger.info(`  ✔ Coordinates: Lat ${siteOrigin.lat}, Lng ${siteOrigin.lng}`);
     });
 
     // ── STEP 3: Click new pin → row selected, pin highlighted ─────────────────
@@ -121,10 +117,9 @@ test.describe('Adding and moving sites', () => {
 
       const rowId = await dashboardPage.getSelectedRowId();
 
-      console.log('\n✅ STEP 3 DONE — Pin clicked');
-      console.log('   Expected results:');
-      console.log(`   ✔ The clicked row is selected in the table (row id: ${rowId})`);
-      console.log('   ✔ The corresponding pin is highlighted on the map');
+      logger.info('STEP 3 DONE — Pin clicked');
+      logger.info(`  ✔ Row selected in table (row id: ${rowId})`);
+      logger.info('  ✔ Corresponding pin is highlighted on the map');
     });
 
     // ── STEP 4: Click "Move Pin" → button changes ─────────────────────────────
@@ -146,18 +141,16 @@ test.describe('Adding and moving sites', () => {
       expect(after.text).toMatch(/moving/i);
       expect(after.backgroundColor).not.toBe('rgb(255, 255, 255)');
 
-      console.log('\n✅ STEP 4 DONE — Move Pin activated');
-      console.log('   Expected results:');
-      console.log(`   ✔ Button color changed : ${before.backgroundColor} → ${after.backgroundColor} (orange)`);
-      console.log(`   ✔ Button text changed  : "${before.text}" → "${after.text}"`);
+      logger.info('STEP 4 DONE — Move Pin activated');
+      logger.info(`  ✔ Button color: ${before.backgroundColor} → ${after.backgroundColor} (orange)`);
+      logger.info(`  ✔ Button text : "${before.text}" → "${after.text}"`);
     });
 
     // ── STEP 5 & 6: Drag pin to new location ─────────────────────────────────
     await test.step('Step 5 & 6 — drag pin to 5227 University Ave, Chula Vista', async () => {
-      console.log('\n⏳ STEP 5 — Dragging pin...');
-      console.log('   Expected results (during drag):');
-      console.log('   ✔ Selected pin follows cursor');
-      console.log('   ✔ No other pins move');
+      logger.info('STEP 5 — Dragging pin...');
+      logger.info('  ✔ Selected pin follows cursor');
+      logger.info('  ✔ No other pins move');
 
       await dashboardPage.dragSelectedPinTo(siteOrigin, siteDestination);
       await page.waitForTimeout(3_000);
@@ -172,18 +165,16 @@ test.describe('Adding and moving sites', () => {
         updatedCells = await dashboardPage.getRowCells(rowIdAfterDrag).catch(() => ({}));
       }
 
-      console.log('\n✅ STEP 6 DONE — Pin placed at new location');
-      console.log('   Expected results:');
-      console.log(`   ✔ Pin placed at new location : ${siteDestination.address}, ${siteDestination.city}, ${siteDestination.state}`);
-      console.log(`   ✔ Target coordinates         : Lat ${siteDestination.lat}, Lng ${siteDestination.lng}`);
-      console.log(`   ✔ New location saved         : row still present (total rows: ${rowsAfterDrag})`);
-      console.log('   ✔ Table row updated with new location data:');
+      logger.info('STEP 6 DONE — Pin placed at new location');
+      logger.info(`  ✔ Location: ${siteDestination.address}, ${siteDestination.city}, ${siteDestination.state}`);
+      logger.info(`  ✔ Coordinates: Lat ${siteDestination.lat}, Lng ${siteDestination.lng}`);
+      logger.info(`  ✔ Row still present (total rows: ${rowsAfterDrag})`);
       if (Object.keys(updatedCells).length > 0) {
         for (const [col, val] of Object.entries(updatedCells)) {
-          if (val) console.log(`       ${col.padEnd(12)}: ${val}`);
+          if (val) logger.info(`  ✔ ${col.padEnd(12)}: ${val}`);
         }
       } else {
-        console.log('       (row cells not in visible viewport — location saved on server)');
+        logger.info('  ✔ Row cells not in visible viewport — location saved on server');
       }
     });
 
@@ -203,20 +194,17 @@ test.describe('Adding and moving sites', () => {
       // Map should have panned and/or zoomed
       expect(distKm > 0.01 || zoomAfter !== zoomBefore).toBeTruthy();
 
-      console.log('\n✅ STEP 7 DONE — Map re-centered after Home');
-      console.log('   Expected results:');
-      console.log(`   ✔ Map re-centers to include all site pins`);
-      console.log(`       Center before : Lat ${centerBefore.lat.toFixed(5)}, Lng ${centerBefore.lng.toFixed(5)}`);
-      console.log(`       Center after  : Lat ${centerAfter.lat.toFixed(5)}, Lng ${centerAfter.lng.toFixed(5)}`);
-      console.log(`       Panned        : ${(distKm * 1000).toFixed(0)} m`);
-      console.log(`   ✔ Zoom adjusts automatically to fit all pins`);
-      console.log(`       Zoom before   : ${zoomBefore}`);
-      console.log(`       Zoom after    : ${zoomAfter}`);
-      console.log(`   ✔ All site pins visible on map  (markers in viewport: ${markersAfterHome})`);
-      console.log('   ✔ No manual panning or zooming required');
-      console.log('\n─────────────────────────────────────────────────────');
-      console.log('🏁 ALL STEPS PASSED');
-      console.log('─────────────────────────────────────────────────────');
+      logger.info('STEP 7 DONE — Map re-centered after Home');
+      logger.info('  ✔ Map re-centers to include all site pins');
+      logger.info(`  ✔ Center before : Lat ${centerBefore.lat.toFixed(5)}, Lng ${centerBefore.lng.toFixed(5)}`);
+      logger.info(`  ✔ Center after  : Lat ${centerAfter.lat.toFixed(5)}, Lng ${centerAfter.lng.toFixed(5)}`);
+      logger.info(`  ✔ Panned        : ${(distKm * 1000).toFixed(0)} m`);
+      logger.info(`  ✔ Zoom before   : ${zoomBefore}`);
+      logger.info(`  ✔ Zoom after    : ${zoomAfter}`);
+      logger.info(`  ✔ Markers in viewport: ${markersAfterHome}`);
+      logger.info('─────────────────────────────────────────────────────');
+      logger.info('ALL STEPS PASSED');
+      logger.info('─────────────────────────────────────────────────────');
     });
   });
 });

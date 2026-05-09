@@ -3,4 +3,5 @@ playwright-report/
 test-results/
 .auth/
 .cache/
+logs/
 .env

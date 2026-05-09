@@ -9,6 +9,8 @@ dotenv.config({ path: path.resolve(__dirname, '.env') });
  * See https://playwright.dev/docs/test-configuration for all options.
  */
 export default defineConfig({
+  globalSetup: require.resolve('./src/utils/global-setup'),
+
   testDir: './tests',
 
   /* Maximum time one test can run.

@@ -1,0 +1,2 @@
+APST Automation Test — Excel stub file used to verify that the application
+rejects unsupported attachment types (.xlsx is not a PDF or Word document).
