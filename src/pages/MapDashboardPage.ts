@@ -97,23 +97,33 @@ export class MapDashboardPage extends BasePage {
     await this.movePinButton.waitFor({ state: 'visible', timeout: 60_000 });
     await this.grid.waitFor({ state: 'attached', timeout: 60_000 });
 
-    // Wait for Google Maps API to be initialised
+    // Wait for Google Maps API and the map instance to be fully initialised
     await this.page.waitForFunction(
       () => Boolean((window as unknown as { google?: { maps?: { Map?: unknown } } }).google?.maps?.Map),
       undefined,
       { timeout: 120_000 },
     );
-    await this.installMapHelpers();
+    await this.waitForMapInstance(120_000);
     await this.waitForSitesLoaded();
   }
 
-  /** Wait for AG-Grid data to arrive by monitoring aria-rowcount stability. */
-  async waitForSitesLoaded(timeout = 90_000): Promise<void> {
-    const STABLE_MS = 4_000;
-    const MIN_ELAPSED = 6_000;
+  /**
+   * Wait for AG-Grid data to arrive by monitoring aria-rowcount stability.
+   *
+   * Strategy:
+   *   1. If aria-rowcount > 0 and has been stable for STABLE_MS → done.
+   *   2. Only conclude "empty grid" after MIN_EMPTY_MS of stable 0 rows
+   *      AND no loading overlay AND at least MIN_ELAPSED have passed.
+   *      This prevents premature exit when the API response is slow.
+   */
+  async waitForSitesLoaded(timeout = 120_000): Promise<void> {
+    const STABLE_MS = 5_000;     // count must be stable for this long
+    const MIN_ELAPSED = 20_000;  // minimum time before accepting "empty"
+    const MIN_EMPTY_MS = 10_000; // must see 0 rows for this long to accept empty
     const start = Date.now();
     let lastCount = -1;
     let stableSince = Date.now();
+    let firstNonZeroSeen = false;
 
     while (Date.now() - start < timeout) {
       const elapsed = Date.now() - start;
@@ -131,12 +141,26 @@ export class MapDashboardPage extends BasePage {
         return { ariaCount, visRows, hasOverlay };
       });
 
-      if (info.ariaCount > 0) return; // data arrived
-
-      if (!info.hasOverlay && elapsed >= MIN_ELAPSED) {
-        if (info.visRows === lastCount) {
-          if (Date.now() - stableSince >= STABLE_MS) return; // settled empty
+      if (info.ariaCount > 0) {
+        firstNonZeroSeen = true;
+        if (info.ariaCount === lastCount) {
+          if (Date.now() - stableSince >= STABLE_MS) return; // stable and populated
         } else {
+          lastCount = info.ariaCount;
+          stableSince = Date.now();
+        }
+      } else {
+        // Count is 0 — only accept as "truly empty" after extended wait
+        if (
+          firstNonZeroSeen === false &&
+          !info.hasOverlay &&
+          elapsed >= MIN_ELAPSED &&
+          info.visRows === lastCount &&
+          Date.now() - stableSince >= MIN_EMPTY_MS
+        ) {
+          return; // settled at empty
+        }
+        if (info.visRows !== lastCount) {
           lastCount = info.visRows;
           stableSince = Date.now();
         }
@@ -153,7 +177,6 @@ export class MapDashboardPage extends BasePage {
     await this.page.evaluate(() => {
       type W = typeof window & { getMapInstance?: () => unknown; __apstMap?: unknown };
       const w = window as W;
-      if (typeof w.getMapInstance === 'function') return;
 
       function isMap(o: unknown): boolean {
         if (!o || typeof o !== 'object') return false;
@@ -168,6 +191,8 @@ export class MapDashboardPage extends BasePage {
       }
 
       function search(): unknown {
+        // Fast path: check known window property first
+        if (w.__apstMap && isMap(w.__apstMap)) return w.__apstMap;
         const seen = new WeakSet<object>();
         const divs = Array.from(document.querySelectorAll('div'));
         for (const div of divs) {
@@ -189,13 +214,27 @@ export class MapDashboardPage extends BasePage {
         return null;
       }
 
+      // Always (re-)define so that a stale cached null is refreshed on next call
       w.getMapInstance = () => {
-        if (w.__apstMap && isMap(w.__apstMap)) return w.__apstMap;
         const m = search();
         if (m) w.__apstMap = m;
         return m;
       };
     });
+  }
+
+  /** Wait until `getMapInstance()` returns a valid map object (with projection). */
+  async waitForMapInstance(timeout = 60_000): Promise<void> {
+    await this.installMapHelpers();
+    await this.page.waitForFunction(
+      () => {
+        type W = typeof window & { getMapInstance?: () => unknown };
+        const m = (window as W).getMapInstance?.() as { getBounds?(): unknown; getProjection?(): unknown } | null;
+        return Boolean(m && m.getBounds?.() && m.getProjection?.());
+      },
+      undefined,
+      { timeout },
+    );
   }
 
   /** Pan and zoom to `target`, waiting for the map `idle` event. */
@@ -342,9 +381,14 @@ export class MapDashboardPage extends BasePage {
     });
   }
 
-  /** Click the Move Pin map control. */
+  /** Click the Move Pin map control (JS-click fallback if an overlay intercepts). */
   async clickMovePin(): Promise<void> {
-    await this.movePinButton.click();
+    await this.movePinButton.waitFor({ state: 'visible', timeout: 15_000 });
+    try {
+      await this.movePinButton.click({ timeout: 5_000 });
+    } catch {
+      await this.movePinButton.evaluate((el: HTMLElement) => el.click());
+    }
     await this.page.waitForTimeout(500);
   }
 

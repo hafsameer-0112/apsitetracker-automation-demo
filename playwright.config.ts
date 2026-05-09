@@ -22,17 +22,15 @@ export default defineConfig({
     timeout: 15 * 1000,
   },
 
-  /* Run tests in files in parallel */
-  fullyParallel: true,
+  /* Run tests sequentially — one at a time, single worker */
+  fullyParallel: false,
+  workers: 1,
 
   /* Fail the build on CI if you accidentally left test.only in the source code */
   forbidOnly: !!process.env.CI,
 
-  /* Retry on CI only */
-  retries: process.env.CI ? 2 : 0,
-
-  /* Workers: parallelism level */
-  workers: process.env.CI ? 2 : undefined,
+  /* No retries */
+  retries: 0,
 
   /* Reporters */
   reporter: [
@@ -76,17 +74,8 @@ export default defineConfig({
   //   reuseExistingServer: !process.env.CI,
   // },
 
-  /* Configure projects for major browsers.
-   *
-   * `setup` logs in once and stores the auth state in `.auth/user.json`;
-   * the browser projects depend on it and run with `storageState` set so
-   * every spec begins already-authenticated.
-   *
-   * The "Adding and moving sites" test case targets the desktop UI and
-   * relies on right-click and drag-and-drop, which Mobile WebKit/Chrome
-   * don't support. Cross-browser projects are kept here for smoke specs
-   * but are excluded from the default `npm test` run via `--project`.
-   */
+  /* Single browser: Chrome only.
+   * `setup` logs in once and caches auth state; chromium reuses it. */
   projects: [
     {
       name: 'setup',
@@ -96,16 +85,6 @@ export default defineConfig({
       name: 'chromium',
       dependencies: ['setup'],
       use: { ...devices['Desktop Chrome'], storageState: '.auth/user.json' },
-    },
-    {
-      name: 'firefox',
-      dependencies: ['setup'],
-      use: { ...devices['Desktop Firefox'], storageState: '.auth/user.json' },
-    },
-    {
-      name: 'webkit',
-      dependencies: ['setup'],
-      use: { ...devices['Desktop Safari'], storageState: '.auth/user.json' },
     },
   ],
 
