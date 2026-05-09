@@ -30,7 +30,6 @@
 
 import * as path from 'path';
 import { test, expect } from '../src/fixtures/test-fixtures';
-import { BundleCache } from '../src/utils/bundle-cache';
 import { MapDashboardPage } from '../src/pages/MapDashboardPage';
 import { TestData } from '../src/data/test-data';
 import { logger } from '../src/utils/logger';
@@ -49,7 +48,6 @@ test.describe('Adding sites and adding data to a site', () => {
   }) => {
     // ── Setup ──────────────────────────────────────────────────────────────────
     test.setTimeout(20 * 60 * 1000);
-    await BundleCache.attach(page);
     await MapDashboardPage.installMapInitHook(page);
 
     // ── Step 1: Login ──────────────────────────────────────────────────────────
@@ -238,10 +236,9 @@ test.describe('Adding sites and adding data to a site', () => {
       const countAfter = (await dashboardPage.getAttachmentNames()).length;
       expect(countAfter, 'Excel file should not be added to the attachment list').toBe(countBefore);
 
-      console.log('\n✅ STEPS 16-17 DONE — Excel file rejected with browser alert');
-      console.log('   Expected results:');
-      console.log(`   ✔ Browser alert appeared    : "${alertMsg}"`);
-      console.log(`   ✔ Attachment count unchanged: ${countBefore} → ${countAfter} (Excel not added)`);
+      logger.info('STEPS 16-17 DONE — Excel file rejected with browser alert');
+      logger.info(`  ✔ Browser alert appeared    : "${alertMsg}"`);
+      logger.info(`  ✔ Attachment count unchanged: ${countBefore} → ${countAfter} (Excel not added)`);
     });
 
     // ── Step 18: Press close ───────────────────────────────────────────────────
@@ -250,13 +247,12 @@ test.describe('Adding sites and adding data to a site', () => {
       await expect(dashboardPage.editScreen).toBeHidden({ timeout: 15_000 });
       await expect(dashboardPage.homeButton).toBeVisible();
 
-      console.log('\n✅ STEP 18 DONE — Edit Screen closed');
-      console.log('   Expected results:');
-      console.log('   ✔ Edit Screen is closed');
-      console.log('   ✔ Back on the main dashboard');
-      console.log('\n─────────────────────────────────────────────────────');
-      console.log('🏁 ALL STEPS PASSED');
-      console.log('─────────────────────────────────────────────────────');
+      logger.info('STEP 18 DONE — Edit Screen closed');
+      logger.info('  ✔ Edit Screen is closed');
+      logger.info('  ✔ Back on the main dashboard');
+      logger.info('─────────────────────────────────────────────────────');
+      logger.info('ALL STEPS PASSED');
+      logger.info('─────────────────────────────────────────────────────');
     });
   });
 });

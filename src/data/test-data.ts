@@ -12,8 +12,8 @@ export interface SiteLocation {
 
 export const TestData = {
   validUser: {
-    email: process.env.TEST_USERNAME ?? 'mikejansen1999@hotmail.com',
-    password: process.env.TEST_PASSWORD ?? 'a8pBsuCi835VU6z',
+    email: process.env.TEST_USERNAME ?? 'example@example.com',
+    password: process.env.TEST_PASSWORD ?? 'password',
   },
   invalidUser: {
     email: 'invalid_user@example.com',

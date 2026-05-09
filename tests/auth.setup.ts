@@ -3,7 +3,6 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { LoginPage } from '../src/pages/LoginPage';
 import { MapDashboardPage } from '../src/pages/MapDashboardPage';
-import { BundleCache } from '../src/utils/bundle-cache';
 import { TestData } from '../src/data/test-data';
 import { logger } from '../src/utils/logger';
 
@@ -22,7 +21,6 @@ setup('authenticate', async ({ page }) => {
     logger.info(`Cached auth state is stale (age=${Math.round(ageMs / 1000)}s) — re-authenticating`);
   }
 
-  await BundleCache.attach(page);
   await MapDashboardPage.installMapInitHook(page);
 
   const loginPage = new LoginPage(page);

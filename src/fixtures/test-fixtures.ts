@@ -2,7 +2,6 @@ import { test as base } from '@playwright/test';
 import { HomePage } from '../pages/HomePage';
 import { LoginPage } from '../pages/LoginPage';
 import { MapDashboardPage } from '../pages/MapDashboardPage';
-import { BundleCache } from '../utils/bundle-cache';
 
 /**
  * Custom Playwright fixtures.
@@ -29,12 +28,10 @@ export const test = base.extend<Pages>({
     await use(new HomePage(page));
   },
   loginPage: async ({ page }, use) => {
-    await BundleCache.attach(page);
     await MapDashboardPage.installMapInitHook(page);
     await use(new LoginPage(page));
   },
   dashboardPage: async ({ page }, use) => {
-    await BundleCache.attach(page);
     await MapDashboardPage.installMapInitHook(page);
     await use(new MapDashboardPage(page));
   },
