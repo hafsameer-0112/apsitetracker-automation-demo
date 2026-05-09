@@ -224,48 +224,39 @@ test.describe('Adding sites and adding data to a site', () => {
     // ── Steps 16–17: Add New Attachment → upload Excel (expect rejection) ──────
     await test.step('Steps 16–17 — click Add New Attachment and upload Excel (expect rejection)', async () => {
       const countBefore = (await dashboardPage.getAttachmentNames()).length;
-      logger.info(`Attachment count before Excel upload attempt: ${countBefore}`);
-
-      // Start watching for an error element concurrently BEFORE clicking —
-      // the app may show a brief toast that disappears before we check later.
-      const errorSelectors = '[class*="error"]:not(script):not(style), [class*="toast"], [role="alert"], [class*="warning"], [class*="rejected"]';
-      const errorCapturePromise = page.locator(errorSelectors).first()
-        .waitFor({ state: 'visible', timeout: 6_000 })
-        .then(() => page.locator(errorSelectors).first().textContent())
-        .catch(() => null);
 
       // Step 16: clicking the button opens the OS file chooser
-      // Step 17: select the Excel fixture file — the app should reject it
-      await dashboardPage.addAttachment(XLSX_FIXTURE);
-
-      const errorText = (await errorCapturePromise)?.trim() || null;
-      logger.info(`Attachment error message: "${errorText}"`);
+      // Step 17: the app fires a JS alert — intercept it, hold it visible for
+      //          2 s so it can be seen in headed runs, assert its message, then
+      //          click OK. The dialog is rendered in the browser during holdMs.
+      const alertMsg = await dashboardPage.addAttachmentExpectRejection(
+        XLSX_FIXTURE,
+        'Only PDF and Word allowed',
+      );
 
       // The attachment list must NOT have grown — this is the hard assertion.
       const countAfter = (await dashboardPage.getAttachmentNames()).length;
       expect(countAfter, 'Excel file should not be added to the attachment list').toBe(countBefore);
 
-      // If the app shows an error, verify its content.
-      // If the app silently rejects (no visible UI feedback), just log it — the
-      // count assertion above already confirms the file was not accepted.
-      if (errorText) {
-        expect(errorText.toLowerCase()).toMatch(
-          /pdf|word|allowed|unsupported|invalid|not supported/i,
-        );
-        logger.info('Excel upload correctly rejected with an error message');
-      } else {
-        logger.info('App silently rejected the Excel file (no error UI shown) — count verified unchanged');
-      }
+      console.log('\n✅ STEPS 16-17 DONE — Excel file rejected with browser alert');
+      console.log('   Expected results:');
+      console.log(`   ✔ Browser alert appeared    : "${alertMsg}"`);
+      console.log(`   ✔ Attachment count unchanged: ${countBefore} → ${countAfter} (Excel not added)`);
     });
 
     // ── Step 18: Press close ───────────────────────────────────────────────────
     await test.step('Step 18 — close the Edit Screen', async () => {
       await dashboardPage.closeEditScreen();
       await expect(dashboardPage.editScreen).toBeHidden({ timeout: 15_000 });
-      logger.info('Edit Screen closed — back on main dashboard');
-
-      // Dashboard and map are still visible
       await expect(dashboardPage.homeButton).toBeVisible();
+
+      console.log('\n✅ STEP 18 DONE — Edit Screen closed');
+      console.log('   Expected results:');
+      console.log('   ✔ Edit Screen is closed');
+      console.log('   ✔ Back on the main dashboard');
+      console.log('\n─────────────────────────────────────────────────────');
+      console.log('🏁 ALL STEPS PASSED');
+      console.log('─────────────────────────────────────────────────────');
     });
   });
 });

@@ -1337,6 +1337,69 @@ export class MapDashboardPage extends BasePage {
   }
 
   /**
+   * Attempt to add an attachment that the app is expected to REJECT.
+   *
+   * Clicks "Add New Attachment", uploads `filePath`, waits for the JS
+   * `alert()` dialog (e.g. "Invalid file: … Only PDF and Word allowed"),
+   * asserts the message contains `expectedFragment` (when provided),
+   * holds the dialog visible for `holdMs` milliseconds (default 2 000) so it
+   * can be seen in headed runs, then clicks OK and returns the alert message.
+   *
+   * The dialog listener is registered BEFORE the file chooser is triggered
+   * so the event is never missed. Use `addAttachment()` for valid files.
+   */
+  async addAttachmentExpectRejection(
+    filePath: string,
+    expectedFragment?: string,
+    holdMs = 2_000,
+  ): Promise<string> {
+    await this.page.evaluate(() => {
+      const panel = document.querySelector('.absractor-values, .edit-workspace');
+      if (panel) panel.scrollTop = panel.scrollHeight;
+    }).catch(() => undefined);
+    await this.page.waitForTimeout(400);
+
+    await this.addNewAttachmentButton.waitFor({ state: 'visible', timeout: 10_000 });
+
+    // WHY page.once() instead of waitForEvent():
+    // The app calls window.alert() synchronously inside the file-input's change
+    // handler, which freezes the page's JS before setFiles() can receive its
+    // "done" signal → setFiles() deadlocks and times out after 30 s.
+    // page.once('dialog', handler) fires the handler IN THE BACKGROUND while
+    // setFiles() is still awaiting, so dialog.accept() can be called (after
+    // the optional holdMs pause) to unfreeze the page and let setFiles() finish.
+    const dialogHandled = new Promise<string>((resolve, reject) => {
+      this.page.once('dialog', async (dialog) => {
+        try {
+          const msg = dialog.message();
+          console.log(`🔔 Browser alert intercepted: "${msg}"`);
+          if (expectedFragment) expect(msg).toContain(expectedFragment);
+          // Keep dialog visible in headed runs; must finish before setFiles() times out.
+          if (holdMs > 0) await this.page.waitForTimeout(holdMs);
+          await dialog.accept();
+          console.log('✅ Browser alert accepted (OK clicked)');
+          resolve(msg);
+        } catch (err) {
+          await dialog.accept().catch(() => undefined);
+          reject(err);
+        }
+      });
+    });
+
+    const fileChooserPromise = this.page.waitForEvent('filechooser', { timeout: 15_000 });
+    await this.addNewAttachmentButton.click();
+    const fileChooser = await fileChooserPromise;
+
+    // setFiles triggers the change event → app calls alert() → the once() handler
+    // above fires concurrently, accepts the dialog after holdMs, unblocking setFiles.
+    await fileChooser.setFiles(filePath);
+
+    const msg = await dialogHandled;
+    await this.page.waitForTimeout(500);
+    return msg;
+  }
+
+  /**
    * Return the displayed names of all files currently in the attachment list.
    * Looks for common filename element patterns; update the inner selector if
    * the app uses a different structure.
